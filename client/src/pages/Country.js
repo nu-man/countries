@@ -2,14 +2,14 @@ import React from "react";
 import "../App.css";
 import { Container, Row, Col } from "react-bootstrap";
 import Uspic from "../images/Us.png"; // Import the image
-import comp from "../images/comp.png";
-import finance from "../images/finance.png";
-import programming from "../images/programming.png";
-import business from "../images/business.png";
-import management from "../images/management.png";
-import social from "../images/social.png";
-import law from "../images/law.png";
-import design from "../images/design.png";
+import comp from "../images/singleCountry/comp.png";
+import finance from "../images/singleCountry/finance.png"
+import programming from "../images/singleCountry/programming.png";
+import business from "../images/singleCountry/business.png";
+import management from "../images/singleCountry/management.png";
+import social from "../images/singleCountry/social.png";
+import law from "../images/singleCountry/law.png";
+import design from "../images//singleCountry/design.png";
 
 function Country() {
   // Array with data for each column in Section 1
@@ -96,7 +96,7 @@ function Country() {
             {cardData.map((data, index) => (
               <Col
                 lg={2}
-                md={2}
+                md={12}
                 sm={12}
                 key={index}
                 style={{ background: data.backgroundColor }}
