@@ -7,89 +7,80 @@ const CountryDetails = () => {
   const { id } = useParams(); // Extract the `id` from the URL
   const navigate = useNavigate(); // Initialize the useNavigate hook
   const [country, setCountry] = useState(null); // State for the first API
-  const [courses, setCourses] = useState([]); // Initialize as an empty array
+  const [courses, setCourses] = useState([]); // State for courses data
+  const [universities, setUniversities] = useState([]); // State for universities data
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCountryDetails = async () => {
       try {
-        // Fetch the first API data
+        setLoading(true);
+
+        // Fetch country details
         const countryResponse = await axios.get(
           `https://campusroot.com/api/v1/public/destination/${id}`
         );
-  
-        if (countryResponse.data && countryResponse.data.data) {
-          let countryData = countryResponse.data.data;
-  
-          // Replace "USA" with "United States of America" and "UK" with "United Kingdom"
-          if (countryData.title === "USA") {
-            countryData.title = "United States of America";
-          } else if (countryData.title === "UK") {
-            countryData.title = "United Kingdom";
-          }
-  
-          setCountry(countryData);
-  
-          // Prepare the request body for the second API
-          const requestBody = {
+        const countryData = countryResponse?.data?.data;
+        if (!countryData) throw new Error("Invalid data from the country API.");
+
+        let normalizedTitle = countryData.title;
+        if (normalizedTitle === "USA") {
+          normalizedTitle = "United States of America";
+        } else if (normalizedTitle === "UK") {
+          normalizedTitle = "United Kingdom";
+        }
+        const updatedCountryData = { ...countryData, title: normalizedTitle };
+        setCountry(updatedCountryData);
+
+        // Fetch university details
+        const universityResponse = await axios.post(
+          "https://campusroot.com/api/v1/public/listings/universities",
+          {
             page: 1,
             filterData: [
               {
                 type: "country",
-                data: [countryData.title], // Use the modified country title
+                data: [normalizedTitle],
               },
             ],
             currency: "CAD",
-          };
-  
-          // Fetch the second API data
-          const coursesResponse = await axios.post(
-            `https://campusroot.com/api/v1/public/listings/courses`,
-            requestBody
-          );
-  
-          // Check if 'data.list' exists and is an array
-          if (
-            coursesResponse.data &&
-            Array.isArray(coursesResponse.data.data.list)
-          ) {
-            setCourses(coursesResponse.data.data.list); // Set the courses from the 'list' array
-          } else {
-            setCourses([]); // Fallback to an empty array if the data is not in the expected structure
-            setError("Invalid data structure from the second API.");
           }
-        } else {
-          setError("Invalid data structure from the first API.");
-        }
+        );
+        const universityList = universityResponse?.data?.data?.list || [];
+        setUniversities(universityList);
+        console.log(universityList);
+        
+
+        // Fetch courses
+        const coursesResponse = await axios.post(
+          `https://campusroot.com/api/v1/public/listings/courses`,
+          {
+            page: 1,
+            filterData: [
+              {
+                type: "country",
+                data: [normalizedTitle],
+              },
+            ],
+            currency: "CAD",
+          }
+        );
+        const coursesList = coursesResponse?.data?.data?.list || [];
+        setCourses(coursesList);
       } catch (err) {
-        setError("Failed to load data from APIs.");
+        setError(err.message || "Failed to load data.");
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchCountryDetails();
   }, [id]);
-  
 
   if (loading) return <div>Loading details...</div>;
   if (error) return <div>{error}</div>;
   if (!country) return <div>No details found for this country.</div>;
-
-  // Get unique universities
-  const universities = Array.from(
-    new Set(courses.map((course) => course.university.name))
-  );
-
-  // Function to navigate to the university or course details page
-  const handleNavigate = (type, id) => {
-    if (type === "university") {
-      navigate(`/university/${id}`);
-    } else if (type === "course") {
-      navigate(`/course/${id}`);
-    }
-  };
 
   return (
     <div style={{ textAlign: "center", padding: "20px" }}>
@@ -105,35 +96,32 @@ const CountryDetails = () => {
         }}
       />
       <Container>
-        {/* Render list of all universities */}
+        {/* Render universities */}
         {universities.length > 0 ? (
           <div
             className="top-courses"
-            style={{
-              marginTop: "20px",
-              textAlign: "left",
-            }}
+            style={{ marginTop: "20px", textAlign: "left" }}
           >
             <h4>
               <strong>Top Universities</strong>
             </h4>
-            <ol>
-              {universities.map((university, index) => (
+            <ul>
+              {universities.slice(0,10).map((university) => (
                 <li
-                  key={index}
-                  onClick={() => handleNavigate("university", university.id)} // Navigate to the university page
-                  style={{ cursor: "pointer", color: "blue" }}
+                  key={university._id}
+                  onClick={() => navigate(`/university/${university._id}`)}
+                  style={{ cursor: "pointer" }}
                 >
-                  <strong>{university}</strong>
+                  <strong>{university.name}</strong>
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
         ) : (
           <div>No universities available for this country.</div>
         )}
 
-        {/* Render list of all courses */}
+        {/* Render courses */}
         {courses.length > 0 ? (
           <div
             className="top-courses"
@@ -142,23 +130,22 @@ const CountryDetails = () => {
             <h4>
               <strong>Top Courses</strong>
             </h4>
-            <ol>
+            <ul>
               {courses.slice(0, 10).map((course) => (
                 <li
                   key={course._id}
-                  onClick={() => handleNavigate("course", course._id)} // Navigate to the course page
+                  onClick={() => navigate(`/course/${course._id}`)}
                   style={{ cursor: "pointer", color: "blue" }}
                 >
                   <strong>{course.name}</strong>
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
         ) : (
           <div>No courses available for this country.</div>
         )}
       </Container>
-      {/* Render the rich text content */}
       <div
         dangerouslySetInnerHTML={{ __html: country.content }}
         style={{
@@ -166,7 +153,6 @@ const CountryDetails = () => {
           margin: "20px auto",
           width: "80%",
           lineHeight: "1.6",
-          fontFamily: "Arial, sans-serif",
         }}
         className="rich-content"
       />
